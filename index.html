@@ -59,9 +59,9 @@
           <select id="setupPeran" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
             <option value="">-- Pilih Peran --</option>
             <option value="admin">Admin / Pemilik</option>
+            <option value="tim_barang_atk">Tim Barang ATK (Keliling)</option>
+            <option value="tim_barang_fashion">Tim Barang Fashion (Keliling)</option>
             <option value="kepala_cabang">Kepala Cabang</option>
-            <option value="tim_atk">Tim ATK Cabang</option>
-            <option value="tim_fashion">Tim Fashion Cabang</option>
           </select>
         </div>
         <div id="setupCabangContainer">
@@ -108,12 +108,12 @@
     </div>
     <h3 class="font-semibold text-gray-700 mb-3">Menu</h3>
     <div class="grid grid-cols-1 gap-3 mb-6">
-      <button onclick="showView('input', { divisi: 'ATK' })" class="bg-white hover:bg-blue-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-blue-200 text-left">
+      <button id="menuJurnalATK" onclick="showView('input', { divisi: 'ATK' })" class="bg-white hover:bg-blue-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-blue-200 text-left">
         <div class="bg-blue-100 p-3 rounded-xl"><span class="text-3xl">📚</span></div>
         <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan ATK</h4><p class="text-sm text-gray-500">Survey stok ATK</p></div>
         <span class="text-gray-400">›</span>
       </button>
-      <button onclick="showView('input', { divisi: 'FASHION' })" class="bg-white hover:bg-purple-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-purple-200 text-left">
+      <button id="menuJurnalFashion" onclick="showView('input', { divisi: 'FASHION' })" class="bg-white hover:bg-purple-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-purple-200 text-left">
         <div class="bg-purple-100 p-3 rounded-xl"><span class="text-3xl">👗</span></div>
         <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan Fashion</h4><p class="text-sm text-gray-500">Survey stok fashion</p></div>
         <span class="text-gray-400">›</span>
@@ -374,7 +374,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 document.getElementById('setupPeran').addEventListener('change', (e) => {
   const container = document.getElementById('setupCabangContainer');
-  if (e.target.value === 'admin') { container.style.display = 'none'; document.getElementById('setupCabang').removeAttribute('required'); }
+  const peranNoCabang = ['admin', 'tim_barang_atk', 'tim_barang_fashion'];
+  if (peranNoCabang.includes(e.target.value)) { container.style.display = 'none'; document.getElementById('setupCabang').removeAttribute('required'); }
   else { container.style.display = 'block'; document.getElementById('setupCabang').setAttribute('required', 'required'); }
 });
 
@@ -387,7 +388,7 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
   const btn = document.getElementById('setupBtn');
   errEl.classList.add('hidden'); btn.disabled = true;
   const { error } = await supabaseClient.from('profiles').insert({
-    id: State.user.id, nama, peran, cabang_id: peran==='admin'?null:parseInt(cabang_id)
+    id: State.user.id, nama, peran, cabang_id: ['admin','tim_barang_atk','tim_barang_fashion'].includes(peran)?null:parseInt(cabang_id)
   });
   if (error) { errEl.textContent='Gagal: '+error.message; errEl.classList.remove('hidden'); btn.disabled=false; return; }
   const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', State.user.id).single();
@@ -405,11 +406,18 @@ async function loadCabangs() {
   const { data } = await supabaseClient.from('cabang').select('*').order('kode');
   State.cabangs = data || [];
 }
-async function loadCabangsForSelect(selectId) {
+async function loadCabangsForSelect(selectId, filterDivisi = null) {
   if (State.cabangs.length === 0) await loadCabangs();
   const sel = document.getElementById(selectId);
   while (sel.options.length > 1) sel.remove(1);
-  State.cabangs.forEach(c => {
+  // Filter cabang berdasarkan divisi (kalau ada)
+  // ATK → tampilkan cabang ATK + KEDUANYA
+  // FASHION → tampilkan cabang FASHION + KEDUANYA
+  // null → tampilkan semua
+  const cabangsToShow = filterDivisi
+    ? State.cabangs.filter(c => !c.divisi || c.divisi === filterDivisi || c.divisi === 'KEDUANYA')
+    : State.cabangs;
+  cabangsToShow.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id; opt.textContent = `${c.kode} - ${c.nama}`;
     sel.appendChild(opt);
@@ -425,9 +433,26 @@ async function initBeranda() {
   if (profile.peran === 'admin') {
     document.getElementById('menuPusat').classList.remove('hidden');
     document.getElementById('menuRingkasan').classList.remove('hidden');
+    document.getElementById('menuJurnalATK').classList.remove('hidden');
+    document.getElementById('menuJurnalFashion').classList.remove('hidden');
   } else {
     document.getElementById('menuPusat').classList.add('hidden');
     document.getElementById('menuRingkasan').classList.add('hidden');
+    // Tim Barang ATK: cuma kelihatan menu ATK
+    if (profile.peran === 'tim_barang_atk') {
+      document.getElementById('menuJurnalATK').classList.remove('hidden');
+      document.getElementById('menuJurnalFashion').classList.add('hidden');
+    }
+    // Tim Barang Fashion: cuma kelihatan menu Fashion
+    else if (profile.peran === 'tim_barang_fashion') {
+      document.getElementById('menuJurnalATK').classList.add('hidden');
+      document.getElementById('menuJurnalFashion').classList.remove('hidden');
+    }
+    // Kepala Cabang & lain-lain: kelihatan keduanya
+    else {
+      document.getElementById('menuJurnalATK').classList.remove('hidden');
+      document.getElementById('menuJurnalFashion').classList.remove('hidden');
+    }
   }
   const now = new Date();
   const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay()+1); startOfWeek.setHours(0,0,0,0);
@@ -465,7 +490,7 @@ async function initInput(params) {
   document.getElementById('inputJamSelesai').value = '';
   document.getElementById('inputCatatan').value = '';
   document.getElementById('categoryList').innerHTML = '';
-  await loadCabangsForSelect('inputCabang');
+  await loadCabangsForSelect('inputCabang', State.input.divisi);
   if (State.profile.cabang_id) document.getElementById('inputCabang').value = State.profile.cabang_id;
   if (State.input.editId) await loadExistingJurnal(State.input.editId);
   else addCategory();
@@ -1122,7 +1147,7 @@ document.getElementById('exportRingkasanBtn').addEventListener('click', () => {
 });
 
 // ============ HELPERS ============
-function formatPeran(p) { return { admin:'Admin', kepala_cabang:'Kepala Cabang', tim_atk:'Tim ATK', tim_fashion:'Tim Fashion' }[p] || p; }
+function formatPeran(p) { return { admin:'Admin', kepala_cabang:'Kepala Cabang', tim_atk:'Tim ATK', tim_fashion:'Tim Fashion', tim_barang_atk:'Tim Barang ATK', tim_barang_fashion:'Tim Barang Fashion' }[p] || p; }
 function formatTanggal(t) { return new Date(t).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', year:'numeric' }); }
 function statusColor(s) { return { draft:'bg-yellow-100 text-yellow-700', submitted:'bg-blue-100 text-blue-700', reviewed:'bg-green-100 text-green-700' }[s] || 'bg-gray-100 text-gray-700'; }
 function labelStatus(s) { return { draft:'Draft', submitted:'Menunggu', reviewed:'Selesai' }[s] || s; }
