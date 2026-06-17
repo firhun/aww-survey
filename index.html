@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWW Survey</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <style>
+    .tab-btn { background: #f3f4f6; color: #4b5563; }
+    .tab-btn.active { background: #2563eb; color: white; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-32">
+
+<!-- LOGIN -->
+<div id="view-login" class="view min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="inline-block bg-white p-4 rounded-2xl shadow-md mb-4"><span class="text-5xl">📋</span></div>
+      <h1 class="text-3xl font-bold text-gray-800">AWW Survey</h1>
+      <p class="text-gray-600 mt-2">Jurnal Kunjungan Toko Digital</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-6">Masuk ke Akun</h2>
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" id="loginEmail" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="email@contoh.com">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" id="loginPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="••••••••">
+        </div>
+        <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+        <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg disabled:opacity-50">Masuk</button>
+      </form>
+      <p class="text-xs text-gray-500 mt-6 text-center">Belum punya akun? Hubungi admin.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP PROFILE -->
+<div id="view-setup" class="view hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-6">
+      <span class="text-5xl">👋</span>
+      <h1 class="text-2xl font-bold text-gray-800 mt-2">Lengkapi Profil</h1>
+    </div>
+    <div class="bg-white rounded-2xl shadow-xl p-6">
+      <form id="setupForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+          <input type="text" id="setupNama" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="Nama lengkap">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Peran</label>
+          <select id="setupPeran" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+            <option value="">-- Pilih Peran --</option>
+            <option value="admin">Admin / Pemilik</option>
+            <option value="kepala_cabang">Kepala Cabang</option>
+            <option value="tim_atk">Tim ATK Cabang</option>
+            <option value="tim_fashion">Tim Fashion Cabang</option>
+          </select>
+        </div>
+        <div id="setupCabangContainer">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Cabang</label>
+          <select id="setupCabang" class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+            <option value="">-- Pilih Cabang --</option>
+          </select>
+        </div>
+        <div id="setupError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+        <button type="submit" id="setupBtn" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg disabled:opacity-50">Simpan & Lanjut</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- APP HEADER -->
+<header id="appHeader" class="hidden bg-white shadow-sm sticky top-0 z-10">
+  <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+    <button id="backBtn" class="hidden text-gray-600 text-2xl">‹</button>
+    <div class="flex-1">
+      <h1 class="font-bold text-gray-800" id="headerTitle">📋 AWW Survey</h1>
+      <p class="text-xs text-gray-500" id="headerSubtitle">Loading...</p>
+    </div>
+    <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-700 px-3 py-1">Keluar</button>
+  </div>
+</header>
+
+<!-- BERANDA -->
+<div id="view-beranda" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 mb-6">
+      <h2 class="text-xl font-semibold" id="berandaGreeting">Halo!</h2>
+      <p class="text-blue-100 text-sm mt-1" id="berandaToday"></p>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-6">
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <p class="text-xs text-gray-500">Minggu Ini</p>
+        <p class="text-2xl font-bold text-blue-600" id="statMingguIni">-</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <p class="text-xs text-gray-500">Bulan Ini</p>
+        <p class="text-2xl font-bold text-indigo-600" id="statBulanIni">-</p>
+      </div>
+    </div>
+    <h3 class="font-semibold text-gray-700 mb-3">Menu</h3>
+    <div class="grid grid-cols-1 gap-3 mb-6">
+      <button onclick="showView('input', { divisi: 'ATK' })" class="bg-white hover:bg-blue-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-blue-200 text-left">
+        <div class="bg-blue-100 p-3 rounded-xl"><span class="text-3xl">📚</span></div>
+        <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan ATK</h4><p class="text-sm text-gray-500">Survey stok ATK</p></div>
+        <span class="text-gray-400">›</span>
+      </button>
+      <button onclick="showView('input', { divisi: 'FASHION' })" class="bg-white hover:bg-purple-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-purple-200 text-left">
+        <div class="bg-purple-100 p-3 rounded-xl"><span class="text-3xl">👗</span></div>
+        <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan Fashion</h4><p class="text-sm text-gray-500">Survey stok fashion</p></div>
+        <span class="text-gray-400">›</span>
+      </button>
+      <button onclick="showView('riwayat')" class="bg-white hover:bg-green-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-green-200 text-left">
+        <div class="bg-green-100 p-3 rounded-xl"><span class="text-3xl">📊</span></div>
+        <div class="flex-1"><h4 class="font-semibold text-gray-800">Riwayat Jurnal</h4><p class="text-sm text-gray-500">Lihat & export jurnal</p></div>
+        <span class="text-gray-400">›</span>
+      </button>
+      <button id="menuPusat" onclick="showView('pusat')" class="hidden bg-white hover:bg-red-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-red-200 text-left">
+        <div class="bg-red-100 p-3 rounded-xl"><span class="text-3xl">🏢</span></div>
+        <div class="flex-1"><h4 class="font-semibold text-gray-800">Pengelolaan Pusat</h4><p class="text-sm text-gray-500">Putuskan: gudang/belanja/retur/transfer</p></div>
+        <span class="text-gray-400">›</span>
+      </button>
+      <button id="menuRingkasan" onclick="showView('ringkasan')" class="hidden bg-white hover:bg-yellow-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-yellow-200 text-left">
+        <div class="bg-yellow-100 p-3 rounded-xl"><span class="text-3xl">📋</span></div>
+        <div class="flex-1"><h4 class="font-semibold text-gray-800">Ringkasan Keputusan</h4><p class="text-sm text-gray-500">Daftar belanja, transfer, retur</p></div>
+        <span class="text-gray-400">›</span>
+      </button>
+    </div>
+    <h3 class="font-semibold text-gray-700 mb-3">Jurnal Terbaru</h3>
+    <div id="jurnalTerbaru" class="space-y-2">
+      <p class="text-center text-gray-400 text-sm py-8">Memuat...</p>
+    </div>
+  </main>
+</div>
+
+<!-- INPUT JURNAL -->
+<div id="view-input" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-700 mb-3">📍 Info Kunjungan</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="block text-xs font-medium text-gray-600 mb-1">Tanggal</label><input type="date" id="inputTanggal" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+        <div><label class="block text-xs font-medium text-gray-600 mb-1">Cabang</label><select id="inputCabang" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">-- Pilih --</option></select></div>
+        <div><label class="block text-xs font-medium text-gray-600 mb-1">Jam Mulai</label><input type="time" id="inputJamMulai" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+        <div><label class="block text-xs font-medium text-gray-600 mb-1">Jam Selesai</label><input type="time" id="inputJamSelesai" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-3 shadow-sm mb-4">
+      <div class="flex items-center gap-2 flex-wrap text-xs">
+        <span class="font-semibold text-gray-700">Kondisi:</span>
+        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full font-bold">M = Menipis</span>
+        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full font-bold">S = Sedang</span>
+        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-bold">P = Penuh</span>
+        <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full font-bold">N = Numpuk</span>
+      </div>
+    </div>
+    <div id="categoryList" class="space-y-4"></div>
+    <button id="addCategoryBtn" class="w-full mt-4 py-4 border-2 border-dashed border-blue-400 text-blue-600 rounded-2xl hover:bg-blue-50 font-semibold">+ Tambah Kategori Baru</button>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mt-4">
+      <label class="block font-semibold text-gray-700 mb-2">📝 Catatan Tambahan (opsional)</label>
+      <textarea id="inputCatatan" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Catatan umum..."></textarea>
+    </div>
+  </main>
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+    <div class="max-w-4xl mx-auto flex gap-2">
+      <button id="saveDraftBtn" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50">💾 Draft</button>
+      <button id="submitJurnalBtn" class="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50">✓ Kirim ke Pusat</button>
+    </div>
+  </div>
+</div>
+
+<!-- RIWAYAT -->
+<div id="view-riwayat" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-700">🔍 Filter</h3>
+        <button id="exportRiwayatBtn" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg">Export Excel</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="block text-xs text-gray-600 mb-1">Cabang</label><select id="riwayatFilterCabang" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Divisi</label><select id="riwayatFilterDivisi" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option><option value="ATK">ATK</option><option value="FASHION">Fashion</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Dari</label><input type="date" id="riwayatFilterDari" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Sampai</label><input type="date" id="riwayatFilterSampai" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+      </div>
+      <button id="applyRiwayatFilterBtn" class="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold">Terapkan</button>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <p class="text-sm text-gray-600">Total: <span id="riwayatTotal" class="font-bold">0</span></p>
+    </div>
+    <div id="riwayatList" class="space-y-2"><p class="text-center text-gray-400 py-8">Memuat...</p></div>
+  </main>
+</div>
+
+<!-- DETAIL -->
+<div id="view-detail" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div id="detailContent"><p class="text-center text-gray-400 py-8">Memuat...</p></div>
+  </main>
+</div>
+
+<!-- PUSAT -->
+<div id="view-pusat" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <button onclick="showView('ringkasan')" class="bg-white rounded-2xl p-4 shadow-sm hover:bg-green-50 border-2 border-transparent hover:border-green-200 text-left">
+        <div class="text-3xl mb-2">📋</div>
+        <p class="font-semibold text-gray-800 text-sm">Lihat Hasil Keputusan</p>
+        <p class="text-xs text-gray-500 mt-1">Daftar belanja, transfer, retur</p>
+      </button>
+      <button onclick="document.getElementById('pusatFilterBox').classList.toggle('hidden')" class="bg-white rounded-2xl p-4 shadow-sm hover:bg-blue-50 border-2 border-transparent hover:border-blue-200 text-left">
+        <div class="text-3xl mb-2">🔍</div>
+        <p class="font-semibold text-gray-800 text-sm">Filter Jurnal</p>
+        <p class="text-xs text-gray-500 mt-1">Per cabang/tanggal/status</p>
+      </button>
+    </div>
+    <div id="pusatFilterBox" class="bg-white rounded-2xl p-4 shadow-sm mb-4 hidden">
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="block text-xs text-gray-600 mb-1">Cabang</label><select id="pusatFilterCabang" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Divisi</label><select id="pusatFilterDivisi" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option><option value="ATK">ATK</option><option value="FASHION">Fashion</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Status</label><select id="pusatFilterStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="submitted">Belum Diputuskan</option><option value="reviewed">Sudah Diputuskan</option><option value="">Semua</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Dari Tanggal</label><input type="date" id="pusatFilterDari" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+      </div>
+      <button id="applyPusatFilterBtn" class="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold">Terapkan</button>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div><p class="text-2xl font-bold text-blue-600" id="pusatStatSubmitted">-</p><p class="text-xs text-gray-500">Menunggu</p></div>
+        <div><p class="text-2xl font-bold text-green-600" id="pusatStatReviewed">-</p><p class="text-xs text-gray-500">Selesai</p></div>
+        <div><p class="text-2xl font-bold text-gray-600" id="pusatStatTotal">-</p><p class="text-xs text-gray-500">Total</p></div>
+      </div>
+    </div>
+    <h3 class="font-semibold text-gray-700 mb-3">Daftar Jurnal</h3>
+    <div id="pusatJurnalList" class="space-y-2"><p class="text-center text-gray-400 py-8">Memuat...</p></div>
+  </main>
+</div>
+
+<!-- PUTUSKAN -->
+<div id="view-putuskan" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="bg-white rounded-2xl p-3 shadow-sm mb-4">
+      <p class="text-xs font-semibold text-gray-700 mb-2">Opsi Keputusan:</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        <div class="px-2 py-1.5 bg-purple-100 text-purple-800 rounded-lg font-bold text-center">📦 GUDANG<br><span class="font-normal">Ambil dari gudang</span></div>
+        <div class="px-2 py-1.5 bg-blue-100 text-blue-800 rounded-lg font-bold text-center">🛒 BELANJA<br><span class="font-normal">Beli ke supplier</span></div>
+        <div class="px-2 py-1.5 bg-red-100 text-red-800 rounded-lg font-bold text-center">↩️ RETUR<br><span class="font-normal">Tarik ke pusat</span></div>
+        <div class="px-2 py-1.5 bg-amber-100 text-amber-800 rounded-lg font-bold text-center">🔄 TRANSFER<br><span class="font-normal">Kirim ke cabang lain</span></div>
+      </div>
+    </div>
+    <div id="putuskanContent"><p class="text-center text-gray-400 py-8">Memuat...</p></div>
+  </main>
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+    <div class="max-w-4xl mx-auto flex gap-2">
+      <div class="flex-1 text-xs text-gray-600 self-center"><span id="putuskanProgress">0/0 item diputuskan</span></div>
+      <button id="putuskanSaveBtn" class="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50">✓ Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- RINGKASAN -->
+<div id="view-ringkasan" class="view hidden">
+  <main class="max-w-4xl mx-auto p-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-700">🔍 Filter Periode</h3>
+        <button id="exportRingkasanBtn" class="bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg">Export Excel</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="block text-xs text-gray-600 mb-1">Dari</label><input type="date" id="ringkasanFilterDari" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Sampai</label><input type="date" id="ringkasanFilterSampai" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Cabang Asal</label><select id="ringkasanFilterCabang" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option></select></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Divisi</label><select id="ringkasanFilterDivisi" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Semua</option><option value="ATK">ATK</option><option value="FASHION">Fashion</option></select></div>
+      </div>
+      <button id="applyRingkasanFilterBtn" class="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold">Terapkan</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+      <div class="bg-purple-50 rounded-xl p-3 text-center border border-purple-200"><p class="text-2xl font-bold text-purple-700" id="ringkasanTotalGudang">-</p><p class="text-xs text-purple-600">📦 Gudang</p></div>
+      <div class="bg-blue-50 rounded-xl p-3 text-center border border-blue-200"><p class="text-2xl font-bold text-blue-700" id="ringkasanTotalBelanja">-</p><p class="text-xs text-blue-600">🛒 Belanja</p></div>
+      <div class="bg-red-50 rounded-xl p-3 text-center border border-red-200"><p class="text-2xl font-bold text-red-700" id="ringkasanTotalRetur">-</p><p class="text-xs text-red-600">↩️ Retur</p></div>
+      <div class="bg-amber-50 rounded-xl p-3 text-center border border-amber-200"><p class="text-2xl font-bold text-amber-700" id="ringkasanTotalTransfer">-</p><p class="text-xs text-amber-600">🔄 Transfer</p></div>
+    </div>
+    <div class="bg-white rounded-2xl p-2 shadow-sm mb-4 flex gap-1 overflow-x-auto">
+      <button data-tab="gudang" class="ringkasan-tab tab-btn active flex-1 min-w-fit px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📦 Gudang</button>
+      <button data-tab="belanja" class="ringkasan-tab tab-btn flex-1 min-w-fit px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🛒 Belanja</button>
+      <button data-tab="retur" class="ringkasan-tab tab-btn flex-1 min-w-fit px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">↩️ Retur</button>
+      <button data-tab="transfer" class="ringkasan-tab tab-btn flex-1 min-w-fit px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🔄 Transfer</button>
+    </div>
+    <div id="ringkasanContent"><p class="text-center text-gray-400 py-8">Memuat...</p></div>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ============ GLOBAL STATE ============
+const State = {
+  user: null, profile: null, cabangs: [],
+  viewStack: [], currentView: null, currentParams: null,
+  input: { divisi: 'ATK', editId: null, categories: [], nextCatId: 1, nextItemId: 1 },
+  putuskan: { jurnalId: null, jurnal: null, items: [] },
+  ringkasan: { allData: [], currentTab: 'gudang' },
+  riwayat: { data: [] }
+};
+
+// ============ VIEW ROUTER ============
+function showView(name, params = {}) {
+  if (State.currentView && State.currentView !== name && !['login','setup'].includes(name)) {
+    State.viewStack.push({ name: State.currentView, params: State.currentParams });
+  }
+  State.currentView = name;
+  State.currentParams = params;
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  document.getElementById(`view-${name}`).classList.remove('hidden');
+  const isAuthView = ['login','setup'].includes(name);
+  document.getElementById('appHeader').classList.toggle('hidden', isAuthView);
+  document.getElementById('backBtn').classList.toggle('hidden', name === 'beranda' || isAuthView);
+  const titles = { beranda:'📋 AWW Survey', input: params.divisi==='ATK'?'📚 Jurnal ATK':'👗 Jurnal Fashion', riwayat:'📊 Riwayat', detail:'Detail Jurnal', pusat:'🏢 Pengelolaan Pusat', putuskan:'Putuskan', ringkasan:'📋 Ringkasan Keputusan' };
+  document.getElementById('headerTitle').textContent = titles[name] || 'AWW Survey';
+  window.scrollTo(0, 0);
+  switch(name) {
+    case 'beranda': initBeranda(); break;
+    case 'input': initInput(params); break;
+    case 'riwayat': initRiwayat(); break;
+    case 'detail': initDetail(params.id); break;
+    case 'pusat': initPusat(); break;
+    case 'putuskan': initPutuskan(params.id); break;
+    case 'ringkasan': initRingkasan(); break;
+  }
+}
+function goBack() {
+  if (State.viewStack.length > 0) {
+    const prev = State.viewStack.pop();
+    State.currentView = null;
+    showView(prev.name, prev.params);
+  } else showView('beranda');
+}
+document.getElementById('backBtn').addEventListener('click', goBack);
+
+// ============ AUTH ============
+(async () => {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { showView('login'); return; }
+  State.user = session.user;
+  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', session.user.id).single();
+  if (!profile) { await loadCabangsForSelect('setupCabang'); showView('setup'); }
+  else { State.profile = profile; await loadCabangs(); showView('beranda'); }
+})();
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.classList.add('hidden'); btn.disabled = true; btn.textContent = 'Memuat...';
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = 'Login gagal: ' + error.message; errEl.classList.remove('hidden');
+    btn.disabled = false; btn.textContent = 'Masuk'; return;
+  }
+  State.user = data.user;
+  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', data.user.id).single();
+  if (!profile) { await loadCabangsForSelect('setupCabang'); showView('setup'); }
+  else { State.profile = profile; await loadCabangs(); showView('beranda'); }
+  btn.disabled = false; btn.textContent = 'Masuk';
+});
+
+document.getElementById('setupPeran').addEventListener('change', (e) => {
+  const container = document.getElementById('setupCabangContainer');
+  if (e.target.value === 'admin') { container.style.display = 'none'; document.getElementById('setupCabang').removeAttribute('required'); }
+  else { container.style.display = 'block'; document.getElementById('setupCabang').setAttribute('required', 'required'); }
+});
+
+document.getElementById('setupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nama = document.getElementById('setupNama').value;
+  const peran = document.getElementById('setupPeran').value;
+  const cabang_id = document.getElementById('setupCabang').value || null;
+  const errEl = document.getElementById('setupError');
+  const btn = document.getElementById('setupBtn');
+  errEl.classList.add('hidden'); btn.disabled = true;
+  const { error } = await supabaseClient.from('profiles').insert({
+    id: State.user.id, nama, peran, cabang_id: peran==='admin'?null:parseInt(cabang_id)
+  });
+  if (error) { errEl.textContent='Gagal: '+error.message; errEl.classList.remove('hidden'); btn.disabled=false; return; }
+  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', State.user.id).single();
+  State.profile = profile; await loadCabangs(); showView('beranda');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  if (!confirm('Yakin mau keluar?')) return;
+  await supabaseClient.auth.signOut();
+  State.user = null; State.profile = null; State.viewStack = [];
+  showView('login');
+});
+
+async function loadCabangs() {
+  const { data } = await supabaseClient.from('cabang').select('*').order('kode');
+  State.cabangs = data || [];
+}
+async function loadCabangsForSelect(selectId) {
+  if (State.cabangs.length === 0) await loadCabangs();
+  const sel = document.getElementById(selectId);
+  while (sel.options.length > 1) sel.remove(1);
+  State.cabangs.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = `${c.kode} - ${c.nama}`;
+    sel.appendChild(opt);
+  });
+}
+
+// ============ BERANDA ============
+async function initBeranda() {
+  const profile = State.profile;
+  document.getElementById('headerSubtitle').textContent = `${profile.nama} • ${formatPeran(profile.peran)}`;
+  document.getElementById('berandaGreeting').textContent = `Halo, ${profile.nama.split(' ')[0]}! 👋`;
+  document.getElementById('berandaToday').textContent = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  if (profile.peran === 'admin') {
+    document.getElementById('menuPusat').classList.remove('hidden');
+    document.getElementById('menuRingkasan').classList.remove('hidden');
+  } else {
+    document.getElementById('menuPusat').classList.add('hidden');
+    document.getElementById('menuRingkasan').classList.add('hidden');
+  }
+  const now = new Date();
+  const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay()+1); startOfWeek.setHours(0,0,0,0);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const { count: m } = await supabaseClient.from('jurnal_kunjungan').select('*',{count:'exact',head:true}).gte('tanggal', startOfWeek.toISOString().split('T')[0]);
+  const { count: b } = await supabaseClient.from('jurnal_kunjungan').select('*',{count:'exact',head:true}).gte('tanggal', startOfMonth.toISOString().split('T')[0]);
+  document.getElementById('statMingguIni').textContent = m || 0;
+  document.getElementById('statBulanIni').textContent = b || 0;
+  const { data } = await supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').order('created_at',{ascending:false}).limit(5);
+  const container = document.getElementById('jurnalTerbaru');
+  if (!data || data.length === 0) { container.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">Belum ada jurnal.</p>'; return; }
+  container.innerHTML = data.map(j => `
+    <button onclick="showView('detail',{id:${j.id}})" class="w-full text-left bg-white rounded-xl p-4 shadow-sm hover:bg-gray-50">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-semibold text-gray-800">${j.divisi==='ATK'?'📚':'👗'} ${j.cabang?.kode||'-'} - ${j.divisi}</p>
+          <p class="text-xs text-gray-500 mt-1">${j.petugas_nama||''} • ${formatTanggal(j.tanggal)}</p>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full ${statusColor(j.status)}">${labelStatus(j.status)}</span>
+      </div>
+    </button>
+  `).join('');
+}
+
+// ============ INPUT JURNAL ============
+async function initInput(params) {
+  State.input.divisi = params.divisi;
+  State.input.editId = params.editId || null;
+  State.input.categories = [];
+  State.input.nextCatId = 1;
+  State.input.nextItemId = 1;
+  document.getElementById('headerSubtitle').textContent = `${State.profile.nama} • ${State.input.divisi}`;
+  document.getElementById('inputTanggal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('inputJamMulai').value = new Date().toTimeString().substring(0,5);
+  document.getElementById('inputJamSelesai').value = '';
+  document.getElementById('inputCatatan').value = '';
+  document.getElementById('categoryList').innerHTML = '';
+  await loadCabangsForSelect('inputCabang');
+  if (State.profile.cabang_id) document.getElementById('inputCabang').value = State.profile.cabang_id;
+  if (State.input.editId) await loadExistingJurnal(State.input.editId);
+  else addCategory();
+}
+
+async function loadExistingJurnal(id) {
+  const { data: jurnal } = await supabaseClient.from('jurnal_kunjungan').select('*').eq('id', id).single();
+  if (!jurnal) return;
+  document.getElementById('inputTanggal').value = jurnal.tanggal;
+  document.getElementById('inputCabang').value = jurnal.cabang_id;
+  document.getElementById('inputJamMulai').value = jurnal.jam_mulai || '';
+  document.getElementById('inputJamSelesai').value = jurnal.jam_selesai || '';
+  document.getElementById('inputCatatan').value = jurnal.catatan_tambahan || '';
+  const { data: items } = await supabaseClient.from('jurnal_items').select('*').eq('jurnal_id', id).order('urutan');
+  const grouped = {}; const orderKat = [];
+  items?.forEach(item => {
+    const kat = item.kategori || '(Tanpa Kategori)';
+    if (!grouped[kat]) { grouped[kat]=[]; orderKat.push(kat); }
+    grouped[kat].push(item);
+  });
+  orderKat.forEach(katNama => {
+    const cat = addCategory(katNama, true);
+    grouped[katNama].forEach(item => addItemRow(cat.id, item));
+  });
+  if (!items || items.length === 0) addCategory();
+}
+
+function addCategory(namaAwal='', skipDefaultItem=false) {
+  const catId = `cat-${State.input.nextCatId++}`;
+  const category = { id: catId, nama: namaAwal, items: [] };
+  State.input.categories.push(category);
+  const div = document.createElement('div');
+  div.id = catId;
+  div.className = 'bg-white rounded-2xl shadow-sm overflow-hidden';
+  const fashionCol = State.input.divisi==='FASHION' ? '<div class="w-32 text-xs font-bold text-gray-600 px-2">Ukuran/Warna</div>' : '';
+  div.innerHTML = `
+    <div class="bg-gradient-to-r from-indigo-100 to-blue-100 p-3 border-b-2 border-blue-300">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">📦</span>
+        <input type="text" placeholder="Nama Kategori (cth: Celana Cowok, Rak Pulpen)" value="${namaAwal}"
+          onchange="updateCategoryName('${catId}', this.value)"
+          class="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg text-base font-bold bg-white">
+        <button onclick="removeCategory('${catId}')" class="text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg text-sm">🗑</button>
+      </div>
+    </div>
+    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2 text-xs font-bold text-gray-600">
+      <div class="w-8 text-center">No</div>
+      <div class="flex-1">Nama Barang</div>
+      <div class="w-44 text-center">Kondisi (M/S/P/N)</div>
+      ${fashionCol}
+      <div class="w-24 text-center">Sisa</div>
+      <div class="w-7"></div>
+    </div>
+    <div id="items-${catId}"></div>
+    <div class="px-3 py-2 bg-gray-50 border-t border-gray-200">
+      <button onclick="addItemRow('${catId}')" class="w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium">+ Tambah Nama Barang</button>
+    </div>
+  `;
+  document.getElementById('categoryList').appendChild(div);
+  if (!skipDefaultItem) addItemRow(catId);
+  return category;
+}
+
+function updateCategoryName(catId, value) {
+  const cat = State.input.categories.find(c => c.id === catId);
+  if (cat) cat.nama = value;
+}
+
+function removeCategory(catId) {
+  const cat = State.input.categories.find(c => c.id === catId);
+  const hasContent = cat?.items.some(i => i.nama_barang || i.kondisi);
+  if (hasContent && !confirm('Kategori ini ada isinya. Yakin mau dihapus?')) return;
+  State.input.categories = State.input.categories.filter(c => c.id !== catId);
+  document.getElementById(catId).remove();
+}
+
+function addItemRow(catId, dataAwal=null) {
+  const cat = State.input.categories.find(c => c.id === catId);
+  if (!cat) return;
+  const itemId = `item-${State.input.nextItemId++}`;
+  const item = {
+    id: itemId,
+    nama_barang: dataAwal?.nama_barang || '',
+    kondisi: dataAwal?.kondisi || '',
+    estimasi_sisa: dataAwal?.estimasi_sisa || '',
+    ukuran_warna: dataAwal?.ukuran_warna || '',
+    catatan: dataAwal?.catatan || ''
+  };
+  cat.items.push(item);
+  const itemsContainer = document.getElementById(`items-${catId}`);
+  const nomor = cat.items.length;
+  const div = document.createElement('div');
+  div.id = itemId;
+  div.className = 'border-b border-gray-100 hover:bg-gray-50';
+  const fashionCol = State.input.divisi==='FASHION' ? `<input type="text" placeholder="Ukuran/Warna" value="${item.ukuran_warna}" onchange="updateItem('${catId}','${itemId}','ukuran_warna',this.value)" class="w-32 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white">` : '';
+  div.innerHTML = `
+    <div class="px-3 py-2 flex items-center gap-2">
+      <div class="w-8 text-center text-sm font-semibold text-gray-500" data-row-number>${nomor}</div>
+      <input type="text" placeholder="Nama barang..." value="${item.nama_barang}" onchange="updateItem('${catId}','${itemId}','nama_barang',this.value)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white">
+      <div class="flex gap-1 flex-shrink-0">
+        ${['M','S','P','N'].map(k => `<button type="button" onclick="setKondisi('${catId}','${itemId}','${k}',this)" class="kondisi-btn-${itemId} w-10 h-10 rounded-lg text-sm font-bold transition ${item.kondisi===k?getKondisiClass(k,true):getKondisiClass(k,false)}" data-kondisi="${k}">${k}</button>`).join('')}
+      </div>
+      ${fashionCol}
+      <input type="text" placeholder="qty" value="${item.estimasi_sisa}" onchange="updateItem('${catId}','${itemId}','estimasi_sisa',this.value)" class="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center bg-white">
+      <button onclick="removeItem('${catId}','${itemId}')" class="text-red-400 hover:text-red-600 text-sm w-7">✕</button>
+    </div>
+    <div class="px-3 pb-2 pl-11">
+      <input type="text" placeholder="Catatan (opsional)..." value="${item.catatan}" onchange="updateItem('${catId}','${itemId}','catatan',this.value)" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50">
+    </div>
+  `;
+  itemsContainer.appendChild(div);
+}
+
+function getKondisiClass(k, active) {
+  const map = {
+    'M': active?'bg-yellow-400 text-white shadow-md':'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-50',
+    'S': active?'bg-green-500 text-white shadow-md':'bg-white text-green-700 border border-green-300 hover:bg-green-50',
+    'P': active?'bg-blue-500 text-white shadow-md':'bg-white text-blue-700 border border-blue-300 hover:bg-blue-50',
+    'N': active?'bg-orange-500 text-white shadow-md':'bg-white text-orange-700 border border-orange-300 hover:bg-orange-50'
+  };
+  return map[k];
+}
+
+function setKondisi(catId, itemId, kondisi, btn) {
+  updateItem(catId, itemId, 'kondisi', kondisi);
+  document.querySelectorAll(`.kondisi-btn-${itemId}`).forEach(b => {
+    const k = b.dataset.kondisi;
+    b.className = `kondisi-btn-${itemId} w-10 h-10 rounded-lg text-sm font-bold transition ${k===kondisi?getKondisiClass(k,true):getKondisiClass(k,false)}`;
+  });
+}
+
+function updateItem(catId, itemId, field, value) {
+  const cat = State.input.categories.find(c => c.id === catId);
+  if (!cat) return;
+  const item = cat.items.find(i => i.id === itemId);
+  if (item) item[field] = value;
+}
+
+function removeItem(catId, itemId) {
+  const cat = State.input.categories.find(c => c.id === catId);
+  if (!cat) return;
+  cat.items = cat.items.filter(i => i.id !== itemId);
+  document.getElementById(itemId).remove();
+  const itemsContainer = document.getElementById(`items-${catId}`);
+  itemsContainer.querySelectorAll('[data-row-number]').forEach((el, idx) => { el.textContent = idx + 1; });
+}
+
+document.getElementById('addCategoryBtn').addEventListener('click', () => addCategory());
+document.getElementById('saveDraftBtn').addEventListener('click', () => saveJurnal('draft'));
+document.getElementById('submitJurnalBtn').addEventListener('click', () => saveJurnal('submitted'));
+
+async function saveJurnal(status) {
+  const tanggal = document.getElementById('inputTanggal').value;
+  const cabang_id = document.getElementById('inputCabang').value;
+  if (!tanggal || !cabang_id) { alert('Tanggal dan Cabang wajib diisi!'); return; }
+  const flatItems = [];
+  let urutan = 1;
+  State.input.categories.forEach(cat => {
+    cat.items.forEach(item => {
+      if (item.nama_barang || item.kondisi) {
+        flatItems.push({
+          urutan: urutan++, kategori: cat.nama || null,
+          nama_barang: item.nama_barang || null, kondisi: item.kondisi || null,
+          estimasi_sisa: item.estimasi_sisa || null, ukuran_warna: item.ukuran_warna || null,
+          catatan: item.catatan || null
+        });
+      }
+    });
+  });
+  if (flatItems.length === 0 && status === 'submitted') { alert('Belum ada item yang diisi!'); return; }
+  const submitBtn = document.getElementById('submitJurnalBtn');
+  const draftBtn = document.getElementById('saveDraftBtn');
+  submitBtn.disabled = true; draftBtn.disabled = true;
+  const jurnalData = {
+    tanggal, cabang_id: parseInt(cabang_id), divisi: State.input.divisi,
+    petugas_id: State.user.id, petugas_nama: State.profile.nama,
+    jam_mulai: document.getElementById('inputJamMulai').value || null,
+    jam_selesai: document.getElementById('inputJamSelesai').value || null,
+    catatan_tambahan: document.getElementById('inputCatatan').value || null,
+    status
+  };
+  let jurnalId = State.input.editId;
+  if (State.input.editId) {
+    const { error } = await supabaseClient.from('jurnal_kunjungan').update(jurnalData).eq('id', State.input.editId);
+    if (error) { alert('Gagal: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+    await supabaseClient.from('jurnal_items').delete().eq('jurnal_id', State.input.editId);
+  } else {
+    const { data, error } = await supabaseClient.from('jurnal_kunjungan').insert(jurnalData).select().single();
+    if (error) { alert('Gagal: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+    jurnalId = data.id;
+  }
+  if (flatItems.length > 0) {
+    const itemsToInsert = flatItems.map(item => ({ ...item, jurnal_id: jurnalId }));
+    const { error } = await supabaseClient.from('jurnal_items').insert(itemsToInsert);
+    if (error) { alert('Gagal simpan items: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+  }
+  alert(status==='submitted'?'✓ Jurnal berhasil dikirim ke pusat!':'💾 Draft tersimpan');
+  submitBtn.disabled = false; draftBtn.disabled = false;
+  showView('beranda');
+}
+
+// ============ RIWAYAT ============
+async function initRiwayat() {
+  await loadCabangsForSelect('riwayatFilterCabang');
+  loadRiwayat();
+}
+
+async function loadRiwayat() {
+  const cabang = document.getElementById('riwayatFilterCabang').value;
+  const divisi = document.getElementById('riwayatFilterDivisi').value;
+  const dari = document.getElementById('riwayatFilterDari').value;
+  const sampai = document.getElementById('riwayatFilterSampai').value;
+  let q = supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').order('tanggal',{ascending:false});
+  if (cabang) q = q.eq('cabang_id', cabang);
+  if (divisi) q = q.eq('divisi', divisi);
+  if (dari) q = q.gte('tanggal', dari);
+  if (sampai) q = q.lte('tanggal', sampai);
+  const { data, error } = await q;
+  if (error) { document.getElementById('riwayatList').innerHTML = `<p class="text-center text-red-500 py-8">${error.message}</p>`; return; }
+  State.riwayat.data = data || [];
+  document.getElementById('riwayatTotal').textContent = State.riwayat.data.length;
+  if (State.riwayat.data.length === 0) { document.getElementById('riwayatList').innerHTML = '<p class="text-center text-gray-400 py-8">Tidak ada jurnal</p>'; return; }
+  document.getElementById('riwayatList').innerHTML = State.riwayat.data.map(j => `
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <div><p class="font-semibold text-gray-800">${j.divisi==='ATK'?'📚':'👗'} ${j.cabang?.kode||'-'} - ${j.divisi}</p><p class="text-xs text-gray-500 mt-1">${formatTanggal(j.tanggal)} • ${j.petugas_nama||'-'}</p></div>
+        <span class="text-xs px-2 py-1 rounded-full ${statusColor(j.status)}">${labelStatus(j.status)}</span>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="showView('detail',{id:${j.id}})" class="flex-1 bg-blue-50 text-blue-700 py-2 rounded-lg text-sm font-medium hover:bg-blue-100">Lihat</button>
+        <button onclick="showView('input',{divisi:'${j.divisi}',editId:${j.id}})" class="flex-1 bg-gray-50 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-100">Edit</button>
+        <button onclick="hapusJurnal(${j.id})" class="px-3 bg-red-50 text-red-700 py-2 rounded-lg text-sm font-medium hover:bg-red-100">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function hapusJurnal(id) {
+  if (!confirm('Yakin mau hapus jurnal ini?')) return;
+  const { error } = await supabaseClient.from('jurnal_kunjungan').delete().eq('id', id);
+  if (error) { alert('Gagal hapus: '+error.message); return; }
+  loadRiwayat();
+}
+
+document.getElementById('applyRiwayatFilterBtn').addEventListener('click', loadRiwayat);
+
+document.getElementById('exportRiwayatBtn').addEventListener('click', async () => {
+  if (State.riwayat.data.length === 0) { alert('Tidak ada data'); return; }
+  const btn = document.getElementById('exportRiwayatBtn');
+  btn.textContent = 'Memproses...'; btn.disabled = true;
+  const jurnalIds = State.riwayat.data.map(j => j.id);
+  const { data: items } = await supabaseClient.from('jurnal_items').select('*').in('jurnal_id', jurnalIds).order('urutan');
+  const rows = [];
+  State.riwayat.data.forEach(j => {
+    const ji = items?.filter(i => i.jurnal_id === j.id) || [];
+    if (ji.length === 0) rows.push({ 'Tanggal':j.tanggal, 'Cabang':`${j.cabang?.kode} - ${j.cabang?.nama}`, 'Divisi':j.divisi, 'Petugas':j.petugas_nama, 'Status':j.status, 'No':'','Kategori':'','Nama Barang':'','Kondisi':'','Estimasi Sisa':'','Ukuran/Warna':'','Catatan':'' });
+    else ji.forEach(item => rows.push({ 'Tanggal':j.tanggal, 'Cabang':`${j.cabang?.kode} - ${j.cabang?.nama}`, 'Divisi':j.divisi, 'Petugas':j.petugas_nama, 'Status':j.status, 'No':item.urutan, 'Kategori':item.kategori, 'Nama Barang':item.nama_barang, 'Kondisi':item.kondisi, 'Estimasi Sisa':item.estimasi_sisa, 'Ukuran/Warna':item.ukuran_warna, 'Catatan':item.catatan }));
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Jurnal');
+  XLSX.writeFile(wb, `Jurnal_AWW_${new Date().toISOString().split('T')[0]}.xlsx`);
+  btn.textContent = 'Export Excel'; btn.disabled = false;
+});
+
+// ============ DETAIL ============
+async function initDetail(id) {
+  const { data: jurnal, error } = await supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').eq('id', id).single();
+  if (error || !jurnal) { document.getElementById('detailContent').innerHTML = '<p class="text-center text-red-500 py-8">Jurnal tidak ditemukan</p>'; return; }
+  const { data: items } = await supabaseClient.from('jurnal_items').select('*').eq('jurnal_id', id).order('urutan');
+  const summary = { M:0, S:0, P:0, N:0 };
+  (items||[]).forEach(i => { if (summary[i.kondisi] !== undefined) summary[i.kondisi]++; });
+  const grouped = {}; const orderKat = [];
+  (items||[]).forEach(item => {
+    const kat = item.kategori || '(Tanpa Kategori)';
+    if (!grouped[kat]) { grouped[kat]=[]; orderKat.push(kat); }
+    grouped[kat].push(item);
+  });
+  document.getElementById('detailContent').innerHTML = `
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xl font-bold text-gray-800">${jurnal.divisi==='ATK'?'📚':'👗'} ${jurnal.divisi}</h2>
+        <div class="flex gap-2 items-center">
+          <span class="text-xs px-3 py-1 rounded-full ${statusColor(jurnal.status)}">${labelStatus(jurnal.status)}</span>
+          <button onclick="showView('input',{divisi:'${jurnal.divisi}',editId:${jurnal.id}})" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg">Edit</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><p class="text-xs text-gray-500">Cabang</p><p class="font-medium">${jurnal.cabang?.kode||'-'} - ${jurnal.cabang?.nama||''}</p></div>
+        <div><p class="text-xs text-gray-500">Tanggal</p><p class="font-medium">${formatTanggal(jurnal.tanggal)}</p></div>
+        <div><p class="text-xs text-gray-500">Petugas</p><p class="font-medium">${jurnal.petugas_nama||'-'}</p></div>
+        <div><p class="text-xs text-gray-500">Jam</p><p class="font-medium">${jurnal.jam_mulai||'-'} s/d ${jurnal.jam_selesai||'-'}</p></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+      <h3 class="font-semibold text-gray-700 mb-3">📊 Ringkasan Kondisi</h3>
+      <div class="grid grid-cols-4 gap-2">
+        <div class="bg-yellow-50 p-3 rounded-xl text-center"><p class="text-2xl font-bold text-yellow-700">${summary.M}</p><p class="text-xs text-yellow-600">Menipis</p></div>
+        <div class="bg-green-50 p-3 rounded-xl text-center"><p class="text-2xl font-bold text-green-700">${summary.S}</p><p class="text-xs text-green-600">Sedang</p></div>
+        <div class="bg-blue-50 p-3 rounded-xl text-center"><p class="text-2xl font-bold text-blue-700">${summary.P}</p><p class="text-xs text-blue-600">Penuh</p></div>
+        <div class="bg-orange-50 p-3 rounded-xl text-center"><p class="text-2xl font-bold text-orange-700">${summary.N}</p><p class="text-xs text-orange-600">Numpuk</p></div>
+      </div>
+    </div>
+    ${(items||[]).length === 0 ? '<div class="bg-white rounded-2xl p-8 shadow-sm text-center"><p class="text-gray-400">Belum ada item</p></div>' :
+      orderKat.map(katNama => `
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
+        <div class="bg-gradient-to-r from-indigo-100 to-blue-100 px-4 py-3 border-b-2 border-blue-300">
+          <div class="flex items-center gap-2"><span class="text-xl">📦</span><h4 class="font-bold text-gray-800 text-base flex-1">${katNama}</h4><span class="text-xs bg-white px-2 py-1 rounded-full text-gray-600">${grouped[katNama].length} barang</span></div>
+        </div>
+        ${grouped[katNama].map((item, idx) => `
+          <div class="border-b border-gray-100 last:border-b-0">
+            <div class="px-3 py-2 flex items-center gap-2">
+              <div class="w-8 text-center text-sm text-gray-500">${idx+1}</div>
+              <div class="flex-1 text-sm font-medium text-gray-800">${item.nama_barang||'-'}</div>
+              <div class="w-16 text-center">${item.kondisi?`<span class="inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${kondisiClass(item.kondisi)}">${item.kondisi}</span>`:'<span class="text-gray-300 text-xs">-</span>'}</div>
+              ${jurnal.divisi==='FASHION'?`<div class="w-28 text-center text-xs text-gray-600">${item.ukuran_warna||'-'}</div>`:''}
+              <div class="w-20 text-center text-xs text-gray-600">${item.estimasi_sisa||'-'}</div>
+            </div>
+            ${item.catatan?`<div class="px-3 pb-2 pl-11 text-xs text-gray-500 italic">📝 ${item.catatan}</div>`:''}
+          </div>
+        `).join('')}
+      </div>
+    `).join('')}
+    ${jurnal.catatan_tambahan?`<div class="bg-white rounded-2xl p-4 shadow-sm mb-4"><h3 class="font-semibold text-gray-700 mb-2">📝 Catatan Tambahan</h3><p class="text-sm text-gray-600">${jurnal.catatan_tambahan}</p></div>`:''}
+  `;
+}
+
+// ============ PUSAT ============
+async function initPusat() {
+  if (State.profile.peran !== 'admin') { alert('Halaman ini hanya untuk Admin.'); showView('beranda'); return; }
+  await loadCabangsForSelect('pusatFilterCabang');
+  loadPusatStats(); loadPusatJurnal();
+}
+
+async function loadPusatStats() {
+  const { count: sub } = await supabaseClient.from('jurnal_kunjungan').select('*',{count:'exact',head:true}).eq('status','submitted');
+  const { count: rev } = await supabaseClient.from('jurnal_kunjungan').select('*',{count:'exact',head:true}).eq('status','reviewed');
+  const { count: total } = await supabaseClient.from('jurnal_kunjungan').select('*',{count:'exact',head:true});
+  document.getElementById('pusatStatSubmitted').textContent = sub || 0;
+  document.getElementById('pusatStatReviewed').textContent = rev || 0;
+  document.getElementById('pusatStatTotal').textContent = total || 0;
+}
+
+async function loadPusatJurnal() {
+  const cabang = document.getElementById('pusatFilterCabang').value;
+  const divisi = document.getElementById('pusatFilterDivisi').value;
+  const status = document.getElementById('pusatFilterStatus').value;
+  const dari = document.getElementById('pusatFilterDari').value;
+  let q = supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').order('tanggal',{ascending:false});
+  if (cabang) q = q.eq('cabang_id', cabang);
+  if (divisi) q = q.eq('divisi', divisi);
+  if (status) q = q.eq('status', status);
+  if (dari) q = q.gte('tanggal', dari);
+  const { data } = await q;
+  const container = document.getElementById('pusatJurnalList');
+  if (!data || data.length === 0) { container.innerHTML = '<p class="text-center text-gray-400 py-8">Tidak ada jurnal</p>'; return; }
+  const jurnalIds = data.map(j => j.id);
+  const { data: itemsCount } = await supabaseClient.from('jurnal_items').select('jurnal_id, keputusan').in('jurnal_id', jurnalIds);
+  const progressMap = {};
+  itemsCount?.forEach(it => {
+    if (!progressMap[it.jurnal_id]) progressMap[it.jurnal_id] = { total:0, decided:0 };
+    progressMap[it.jurnal_id].total++;
+    if (it.keputusan) progressMap[it.jurnal_id].decided++;
+  });
+  container.innerHTML = data.map(j => {
+    const prog = progressMap[j.id] || { total:0, decided:0 };
+    const pct = prog.total > 0 ? Math.round((prog.decided/prog.total)*100) : 0;
+    return `
+      <button onclick="showView('putuskan',{id:${j.id}})" class="w-full text-left bg-white rounded-xl p-4 shadow-sm hover:bg-blue-50">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex-1"><p class="font-semibold text-gray-800">${j.divisi==='ATK'?'📚':'👗'} ${j.cabang?.kode||'-'} - ${j.divisi}</p><p class="text-xs text-gray-500 mt-1">${formatTanggal(j.tanggal)} • ${j.petugas_nama||'-'}</p></div>
+          <span class="text-xs px-2 py-1 rounded-full ${statusColor(j.status)}">${labelStatus(j.status)}</span>
+        </div>
+        <div class="mt-2">
+          <div class="flex items-center justify-between text-xs text-gray-600 mb-1"><span>Keputusan: ${prog.decided}/${prog.total}</span><span class="font-bold">${pct}%</span></div>
+          <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${pct}%"></div></div>
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+document.getElementById('applyPusatFilterBtn').addEventListener('click', loadPusatJurnal);
+
+// ============ PUTUSKAN ============
+async function initPutuskan(jurnalId) {
+  State.putuskan.jurnalId = jurnalId;
+  const { data: j } = await supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').eq('id', jurnalId).single();
+  if (!j) { document.getElementById('putuskanContent').innerHTML = '<p class="text-center text-red-500 py-8">Jurnal tidak ditemukan</p>'; return; }
+  State.putuskan.jurnal = j;
+  document.getElementById('headerSubtitle').textContent = `${j.divisi==='ATK'?'📚':'👗'} ${j.cabang?.kode} • ${formatTanggal(j.tanggal)}`;
+  const { data: itemData } = await supabaseClient.from('jurnal_items').select('*').eq('jurnal_id', jurnalId).order('urutan');
+  State.putuskan.items = itemData || [];
+  renderPutuskan();
+  updatePutuskanProgress();
+}
+
+function renderPutuskan() {
+  const items = State.putuskan.items;
+  const jurnal = State.putuskan.jurnal;
+  const grouped = {}; const orderKat = [];
+  items.forEach(item => {
+    const kat = item.kategori || '(Tanpa Kategori)';
+    if (!grouped[kat]) { grouped[kat]=[]; orderKat.push(kat); }
+    grouped[kat].push(item);
+  });
+  const html = orderKat.map(katNama => `
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
+      <div class="bg-gradient-to-r from-indigo-100 to-blue-100 px-3 py-3 border-b-2 border-blue-300">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl">📦</span>
+          <h4 class="font-bold text-gray-800 text-base flex-1">${katNama}</h4>
+          <span class="text-xs bg-white px-2 py-1 rounded-full text-gray-600">${grouped[katNama].length} barang</span>
+        </div>
+        <div class="flex items-center gap-1 flex-wrap">
+          <span class="text-xs text-gray-700 font-medium mr-1">Set semua:</span>
+          <button onclick="setBatchKeputusan('${katNama}','gudang')" class="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 border border-purple-200">📦 Gudang</button>
+          <button onclick="setBatchKeputusan('${katNama}','belanja')" class="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200">🛒 Belanja</button>
+          <button onclick="setBatchKeputusan('${katNama}','retur')" class="text-xs px-2 py-1 bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200">↩️ Retur</button>
+          <button onclick="setBatchKeputusan('${katNama}',null)" class="text-xs px-2 py-1 bg-gray-50 text-gray-700 rounded hover:bg-gray-100 border border-gray-200">⊘ Kosongkan</button>
+        </div>
+      </div>
+      ${grouped[katNama].map((item, idx) => renderPutuskanItem(item, idx+1, jurnal)).join('')}
+    </div>
+  `).join('');
+  document.getElementById('putuskanContent').innerHTML = html || '<p class="text-center text-gray-400 py-8">Tidak ada item</p>';
+}
+
+function renderPutuskanItem(item, nomor, jurnal) {
+  const kondisiBadge = item.kondisi ? `<span class="inline-block px-2 py-1 rounded-lg text-xs font-bold ${kondisiClass(item.kondisi)}">${item.kondisi}</span>` : '<span class="text-gray-300 text-xs">-</span>';
+  const transferDropdown = item.keputusan === 'transfer' ? `
+    <select onchange="setTransferCabang(${item.id}, this.value)" class="w-full mt-2 px-2 py-1.5 border border-amber-300 rounded-lg text-xs bg-amber-50">
+      <option value="">-- Pilih Cabang Tujuan --</option>
+      ${State.cabangs.filter(c => c.id !== jurnal.cabang_id).map(c => `<option value="${c.id}" ${item.transfer_ke_cabang_id==c.id?'selected':''}>${c.kode} - ${c.nama}</option>`).join('')}
+    </select>
+  ` : '';
+  const catatanRow = item.keputusan ? `
+    <div class="mt-2 grid grid-cols-2 gap-2">
+      <input type="text" placeholder="Jumlah" value="${item.keputusan_jumlah||''}" onchange="setKeputusanField(${item.id},'keputusan_jumlah',this.value)" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+      <input type="text" placeholder="Catatan keputusan" value="${item.keputusan_catatan||''}" onchange="setKeputusanField(${item.id},'keputusan_catatan',this.value)" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+    </div>
+  ` : '';
+  return `
+    <div class="border-b border-gray-100 last:border-b-0 p-3 ${item.keputusan?'bg-green-50/30':''}">
+      <div class="flex items-center gap-2 mb-2">
+        <div class="w-8 text-center text-sm font-semibold text-gray-500">${nomor}</div>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-800">${item.nama_barang||'-'}</p>
+          ${item.ukuran_warna?`<p class="text-xs text-gray-500">🎨 ${item.ukuran_warna}</p>`:''}
+          ${item.catatan?`<p class="text-xs text-gray-500 italic">📝 ${item.catatan}</p>`:''}
+        </div>
+        <div class="w-16 text-center">${kondisiBadge}</div>
+        <div class="w-16 text-center text-xs text-gray-600">${item.estimasi_sisa||'-'}</div>
+      </div>
+      <div class="grid grid-cols-4 gap-1 mt-2">
+        <button onclick="setKeputusan(${item.id},'gudang')" class="py-2 rounded-lg text-xs font-bold ${item.keputusan==='gudang'?'bg-purple-500 text-white shadow-md':'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}">📦 Gudang</button>
+        <button onclick="setKeputusan(${item.id},'belanja')" class="py-2 rounded-lg text-xs font-bold ${item.keputusan==='belanja'?'bg-blue-500 text-white shadow-md':'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'}">🛒 Belanja</button>
+        <button onclick="setKeputusan(${item.id},'retur')" class="py-2 rounded-lg text-xs font-bold ${item.keputusan==='retur'?'bg-red-500 text-white shadow-md':'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}">↩️ Retur</button>
+        <button onclick="setKeputusan(${item.id},'transfer')" class="py-2 rounded-lg text-xs font-bold ${item.keputusan==='transfer'?'bg-amber-500 text-white shadow-md':'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'}">🔄 Transfer</button>
+      </div>
+      ${transferDropdown}
+      ${catatanRow}
+    </div>
+  `;
+}
+
+function setKeputusan(itemId, keputusan) {
+  const item = State.putuskan.items.find(i => i.id === itemId);
+  if (!item) return;
+  if (item.keputusan === keputusan) { item.keputusan = null; item.transfer_ke_cabang_id = null; }
+  else { item.keputusan = keputusan; if (keputusan !== 'transfer') item.transfer_ke_cabang_id = null; }
+  renderPutuskan(); updatePutuskanProgress();
+}
+
+function setBatchKeputusan(katNama, keputusan) {
+  const targetItems = State.putuskan.items.filter(i => (i.kategori || '(Tanpa Kategori)') === katNama);
+  if (!keputusan) {
+    if (!confirm(`Kosongkan keputusan untuk semua barang di "${katNama}"?`)) return;
+    targetItems.forEach(item => { item.keputusan = null; item.transfer_ke_cabang_id = null; });
+  } else {
+    const hasDecided = targetItems.some(i => i.keputusan && i.keputusan !== keputusan);
+    if (hasDecided && !confirm(`Timpa semua dengan keputusan ini?`)) return;
+    targetItems.forEach(item => { item.keputusan = keputusan; if (keputusan !== 'transfer') item.transfer_ke_cabang_id = null; });
+  }
+  renderPutuskan(); updatePutuskanProgress();
+}
+
+function setTransferCabang(itemId, cabangId) {
+  const item = State.putuskan.items.find(i => i.id === itemId);
+  if (item) item.transfer_ke_cabang_id = cabangId ? parseInt(cabangId) : null;
+}
+
+function setKeputusanField(itemId, field, value) {
+  const item = State.putuskan.items.find(i => i.id === itemId);
+  if (item) item[field] = value;
+}
+
+function updatePutuskanProgress() {
+  const total = State.putuskan.items.length;
+  const decided = State.putuskan.items.filter(i => i.keputusan).length;
+  document.getElementById('putuskanProgress').textContent = `${decided}/${total} item diputuskan`;
+}
+
+document.getElementById('putuskanSaveBtn').addEventListener('click', async () => {
+  const items = State.putuskan.items;
+  const transferTanpaCabang = items.filter(i => i.keputusan === 'transfer' && !i.transfer_ke_cabang_id);
+  if (transferTanpaCabang.length > 0) { alert(`Ada ${transferTanpaCabang.length} barang Transfer belum pilih cabang tujuan!`); return; }
+  const btn = document.getElementById('putuskanSaveBtn');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  let errCount = 0;
+  for (const item of items) {
+    const updateData = {
+      keputusan: item.keputusan,
+      keputusan_jumlah: item.keputusan_jumlah || null,
+      keputusan_catatan: item.keputusan_catatan || null,
+      transfer_ke_cabang_id: item.transfer_ke_cabang_id || null,
+      keputusan_by: item.keputusan ? State.user.id : null,
+      keputusan_at: item.keputusan ? new Date().toISOString() : null
+    };
+    const { error } = await supabaseClient.from('jurnal_items').update(updateData).eq('id', item.id);
+    if (error) { console.error(error); errCount++; }
+  }
+  if (errCount > 0) { alert(`Selesai dengan ${errCount} error.`); btn.disabled=false; btn.textContent='✓ Simpan'; return; }
+  const allDecided = items.every(i => i.keputusan);
+  if (allDecided) {
+    await supabaseClient.from('jurnal_kunjungan').update({ status:'reviewed', updated_at: new Date().toISOString() }).eq('id', State.putuskan.jurnalId);
+  }
+  alert(allDecided ? '✓ Semua diputuskan, jurnal selesai!' : '✓ Tersimpan. Masih ada yang belum diputuskan.');
+  btn.disabled = false; btn.textContent = '✓ Simpan';
+  showView('pusat');
+});
+
+// ============ RINGKASAN ============
+async function initRingkasan() {
+  if (State.profile.peran !== 'admin') { alert('Halaman ini hanya untuk Admin.'); showView('beranda'); return; }
+  await loadCabangsForSelect('ringkasanFilterCabang');
+  State.ringkasan.currentTab = 'gudang';
+  document.querySelectorAll('.ringkasan-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'gudang'));
+  loadRingkasanData();
+}
+
+async function loadRingkasanData() {
+  const dari = document.getElementById('ringkasanFilterDari').value;
+  const sampai = document.getElementById('ringkasanFilterSampai').value;
+  const cabang = document.getElementById('ringkasanFilterCabang').value;
+  const divisi = document.getElementById('ringkasanFilterDivisi').value;
+  let q = supabaseClient.from('jurnal_kunjungan').select('id, tanggal, divisi, cabang_id, cabang(kode, nama), petugas_nama');
+  if (dari) q = q.gte('tanggal', dari);
+  if (sampai) q = q.lte('tanggal', sampai);
+  if (cabang) q = q.eq('cabang_id', cabang);
+  if (divisi) q = q.eq('divisi', divisi);
+  const { data: jurnalData } = await q;
+  if (!jurnalData || jurnalData.length === 0) {
+    updateRingkasanStats({ gudang:0, belanja:0, retur:0, transfer:0 });
+    document.getElementById('ringkasanContent').innerHTML = '<p class="text-center text-gray-400 py-8">Tidak ada data</p>';
+    return;
+  }
+  const jurnalIds = jurnalData.map(j => j.id);
+  const jurnalMap = {}; jurnalData.forEach(j => jurnalMap[j.id] = j);
+  const { data: itemData } = await supabaseClient.from('jurnal_items').select('*').in('jurnal_id', jurnalIds).not('keputusan', 'is', null);
+  State.ringkasan.allData = (itemData || []).map(item => ({ ...item, _jurnal: jurnalMap[item.jurnal_id] }));
+  const stats = { gudang:0, belanja:0, retur:0, transfer:0 };
+  State.ringkasan.allData.forEach(item => { if (stats[item.keputusan] !== undefined) stats[item.keputusan]++; });
+  updateRingkasanStats(stats);
+  renderRingkasan();
+}
+
+function updateRingkasanStats(stats) {
+  document.getElementById('ringkasanTotalGudang').textContent = stats.gudang || 0;
+  document.getElementById('ringkasanTotalBelanja').textContent = stats.belanja || 0;
+  document.getElementById('ringkasanTotalRetur').textContent = stats.retur || 0;
+  document.getElementById('ringkasanTotalTransfer').textContent = stats.transfer || 0;
+}
+
+function renderRingkasan() {
+  const filtered = State.ringkasan.allData.filter(i => i.keputusan === State.ringkasan.currentTab);
+  if (filtered.length === 0) { document.getElementById('ringkasanContent').innerHTML = `<div class="bg-white rounded-2xl p-8 shadow-sm text-center text-gray-400">Tidak ada item dengan keputusan ini</div>`; return; }
+  const grouped = {}; const orderKat = [];
+  filtered.forEach(item => {
+    const kat = item.kategori || '(Tanpa Kategori)';
+    if (!grouped[kat]) { grouped[kat]=[]; orderKat.push(kat); }
+    grouped[kat].push(item);
+  });
+  const tab = State.ringkasan.currentTab;
+  document.getElementById('ringkasanContent').innerHTML = orderKat.map(katNama => `
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
+      <div class="bg-gradient-to-r from-indigo-100 to-blue-100 px-4 py-3 border-b-2 border-blue-300">
+        <div class="flex items-center gap-2"><span class="text-xl">📦</span><h4 class="font-bold text-gray-800 text-base flex-1">${katNama}</h4><span class="text-xs bg-white px-2 py-1 rounded-full text-gray-600">${grouped[katNama].length} barang</span></div>
+      </div>
+      ${grouped[katNama].map(item => {
+        const tujuan = item.keputusan==='transfer' && item.transfer_ke_cabang_id ? State.cabangs.find(c => c.id === item.transfer_ke_cabang_id) : null;
+        return `
+          <div class="border-b border-gray-100 last:border-b-0 p-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-800">${item.nama_barang||'-'}</p>
+                <div class="flex flex-wrap gap-2 text-xs text-gray-500 mt-0.5">
+                  ${item.ukuran_warna?`<span>🎨 ${item.ukuran_warna}</span>`:''}
+                  ${item.kondisi?`<span class="inline-block px-1.5 py-0.5 rounded ${kondisiClass(item.kondisi)} text-white text-xs font-bold">${item.kondisi}</span>`:''}
+                  <span>📅 ${formatTanggal(item._jurnal.tanggal)}</span>
+                </div>
+                ${item.keputusan_catatan?`<p class="text-xs text-gray-500 italic mt-1">📝 ${item.keputusan_catatan}</p>`:''}
+              </div>
+              <div class="w-24 text-xs text-center"><p class="font-medium text-gray-700">${item._jurnal.cabang?.kode||'-'}</p><p class="text-gray-400">${item._jurnal.cabang?.nama||''}</p></div>
+              ${tab==='transfer'?`<div class="w-24 text-xs text-center">${tujuan?`<p class="font-bold text-amber-700">${tujuan.kode}</p><p class="text-gray-400">${tujuan.nama}</p>`:'<span class="text-red-500">Belum dipilih!</span>'}</div>`:''}
+              <div class="w-20 text-center"><p class="text-sm font-bold text-gray-800">${item.keputusan_jumlah||'-'}</p></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.ringkasan-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ringkasan-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    State.ringkasan.currentTab = btn.dataset.tab;
+    renderRingkasan();
+  });
+});
+
+document.getElementById('applyRingkasanFilterBtn').addEventListener('click', loadRingkasanData);
+
+document.getElementById('exportRingkasanBtn').addEventListener('click', () => {
+  if (State.ringkasan.allData.length === 0) { alert('Tidak ada data'); return; }
+  const wb = XLSX.utils.book_new();
+  ['gudang','belanja','retur','transfer'].forEach(jenis => {
+    const items = State.ringkasan.allData.filter(i => i.keputusan === jenis);
+    if (items.length === 0) return;
+    const rows = items.map(item => {
+      const tujuan = item.transfer_ke_cabang_id ? State.cabangs.find(c => c.id === item.transfer_ke_cabang_id) : null;
+      return {
+        'Tanggal': item._jurnal.tanggal,
+        'Cabang Asal': `${item._jurnal.cabang?.kode||''} - ${item._jurnal.cabang?.nama||''}`,
+        'Divisi': item._jurnal.divisi,
+        'Kategori': item.kategori,
+        'Nama Barang': item.nama_barang,
+        'Kondisi': item.kondisi,
+        'Estimasi Sisa': item.estimasi_sisa,
+        'Ukuran/Warna': item.ukuran_warna || '',
+        'Jumlah': item.keputusan_jumlah || '',
+        'Cabang Tujuan': tujuan ? `${tujuan.kode} - ${tujuan.nama}` : '',
+        'Catatan Keputusan': item.keputusan_catatan || '',
+        'Catatan Survey': item.catatan || ''
+      };
+    });
+    const sheetName = { gudang:'Gudang', belanja:'Belanja', retur:'Retur', transfer:'Transfer' }[jenis];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+  XLSX.writeFile(wb, `Keputusan_Pusat_${new Date().toISOString().split('T')[0]}.xlsx`);
+});
+
+// ============ HELPERS ============
+function formatPeran(p) { return { admin:'Admin', kepala_cabang:'Kepala Cabang', tim_atk:'Tim ATK', tim_fashion:'Tim Fashion' }[p] || p; }
+function formatTanggal(t) { return new Date(t).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', year:'numeric' }); }
+function statusColor(s) { return { draft:'bg-yellow-100 text-yellow-700', submitted:'bg-blue-100 text-blue-700', reviewed:'bg-green-100 text-green-700' }[s] || 'bg-gray-100 text-gray-700'; }
+function labelStatus(s) { return { draft:'Draft', submitted:'Menunggu', reviewed:'Selesai' }[s] || s; }
+function kondisiClass(k) { return { M:'bg-yellow-400 text-white', S:'bg-green-500 text-white', P:'bg-blue-500 text-white', N:'bg-orange-500 text-white' }[k] || 'bg-gray-300'; }
+</script>
+</body>
+</html>
