@@ -311,7 +311,9 @@ const State = {
 
 // ============ VIEW ROUTER ============
 function showView(name, params = {}) {
-  if (State.currentView && State.currentView !== name && !['login','setup'].includes(name)) {
+  // Kalau ke beranda, reset viewStack biar nggak terus-terusan numpuk di memory
+  if (name === 'beranda') State.viewStack = [];
+  else if (State.currentView && State.currentView !== name && !['login','setup'].includes(name)) {
     State.viewStack.push({ name: State.currentView, params: State.currentParams });
   }
   State.currentView = name;
@@ -344,11 +346,28 @@ function goBack() {
 document.getElementById('backBtn').addEventListener('click', goBack);
 
 // ============ AUTH ============
+async function loadUserProfile(userId) {
+  // Ambil profile aja dulu (tanpa join), pake maybeSingle biar return null kalau ga ada
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) { console.error('Error loading profile:', error); return null; }
+  if (!profile) return null;
+  // Kalau ada cabang_id, ambil data cabangnya
+  if (profile.cabang_id) {
+    const { data: cabang } = await supabaseClient.from('cabang').select('*').eq('id', profile.cabang_id).maybeSingle();
+    profile.cabang = cabang;
+  }
+  return profile;
+}
+
 (async () => {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { showView('login'); return; }
   State.user = session.user;
-  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', session.user.id).single();
+  const profile = await loadUserProfile(session.user.id);
   if (!profile) { await loadCabangsForSelect('setupCabang'); showView('setup'); }
   else { State.profile = profile; await loadCabangs(); showView('beranda'); }
 })();
@@ -366,7 +385,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     btn.disabled = false; btn.textContent = 'Masuk'; return;
   }
   State.user = data.user;
-  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', data.user.id).single();
+  const profile = await loadUserProfile(data.user.id);
   if (!profile) { await loadCabangsForSelect('setupCabang'); showView('setup'); }
   else { State.profile = profile; await loadCabangs(); showView('beranda'); }
   btn.disabled = false; btn.textContent = 'Masuk';
@@ -387,11 +406,12 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
   const errEl = document.getElementById('setupError');
   const btn = document.getElementById('setupBtn');
   errEl.classList.add('hidden'); btn.disabled = true;
-  const { error } = await supabaseClient.from('profiles').insert({
+  // Pake upsert biar kalau profile udah ada, dia update aja (bukan error duplicate)
+  const { error } = await supabaseClient.from('profiles').upsert({
     id: State.user.id, nama, peran, cabang_id: ['admin','tim_barang_atk','tim_barang_fashion'].includes(peran)?null:parseInt(cabang_id)
   });
   if (error) { errEl.textContent='Gagal: '+error.message; errEl.classList.remove('hidden'); btn.disabled=false; return; }
-  const { data: profile } = await supabaseClient.from('profiles').select('*, cabang(*)').eq('id', State.user.id).single();
+  const profile = await loadUserProfile(State.user.id);
   State.profile = profile; await loadCabangs(); showView('beranda');
 });
 
@@ -403,7 +423,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 async function loadCabangs() {
-  const { data } = await supabaseClient.from('cabang').select('*').order('kode');
+  const { data, error } = await supabaseClient.from('cabang').select('*').order('kode');
+  if (error) console.error('Error load cabang:', error);
   State.cabangs = data || [];
 }
 async function loadCabangsForSelect(selectId, filterDivisi = null) {
@@ -878,6 +899,7 @@ document.getElementById('applyPusatFilterBtn').addEventListener('click', loadPus
 // ============ PUTUSKAN ============
 async function initPutuskan(jurnalId) {
   State.putuskan.jurnalId = jurnalId;
+  if (State.cabangs.length === 0) await loadCabangs();
   const { data: j } = await supabaseClient.from('jurnal_kunjungan').select('*, cabang(kode, nama)').eq('id', jurnalId).single();
   if (!j) { document.getElementById('putuskanContent').innerHTML = '<p class="text-center text-red-500 py-8">Jurnal tidak ditemukan</p>'; return; }
   State.putuskan.jurnal = j;
