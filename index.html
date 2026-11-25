@@ -8,33 +8,53 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
   <style>
-    .tab-btn { background: #f3f4f6; color: #4b5563; }
-    .tab-btn.active { background: #2563eb; color: white; }
+    .tab-btn { background: #f3f4f6; color: #4b5563; transition: all .2s; }
+    .tab-btn.active { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+    .view { animation: fadeIn .25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+    .toast-in { animation: slideUp .3s ease-out; }
+    .toast-out { animation: slideDown .3s ease-in forwards; }
+    .btn-press { transition: transform .1s; }
+    .btn-press:active { transform: scale(.95); }
+    .kondisi-btn { transition: all .15s; }
+    .kondisi-btn:active { transform: scale(.9); }
+    .kondisi-btn.selected { box-shadow: 0 0 0 3px rgba(255,255,255,.5), 0 4px 14px rgba(0,0,0,.2); transform: scale(1.1); }
+    .card-hover { transition: all .2s; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,.08); }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .glass-card { background: rgba(255,255,255,.95); backdrop-filter: blur(10px); }
+    body { -webkit-tap-highlight-color: transparent; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-32">
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen pb-32">
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none" style="max-width: 90vw;"></div>
 
 <!-- LOGIN -->
-<div id="view-login" class="view min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+<div id="view-login" class="view min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
   <div class="w-full max-w-md">
     <div class="text-center mb-8">
-      <div class="inline-block bg-white p-4 rounded-2xl shadow-md mb-4"><span class="text-5xl">📋</span></div>
-      <h1 class="text-3xl font-bold text-gray-800">AWW Survey</h1>
-      <p class="text-gray-600 mt-2">Jurnal Kunjungan Toko Digital</p>
+      <div class="inline-block bg-white/20 backdrop-blur-sm p-5 rounded-3xl shadow-2xl mb-4 border border-white/30"><span class="text-6xl">📋</span></div>
+      <h1 class="text-4xl font-bold text-white drop-shadow-lg">AWW Survey</h1>
+      <p class="text-blue-100 mt-2">Jurnal Kunjungan Toko Digital</p>
     </div>
-    <div class="bg-white rounded-2xl shadow-xl p-8">
-      <h2 class="text-xl font-semibold text-gray-800 mb-6">Masuk ke Akun</h2>
+    <div class="glass-card rounded-3xl shadow-2xl p-8">
+      <h2 class="text-xl font-bold text-gray-800 mb-6">Masuk ke Akun 👋</h2>
       <form id="loginForm" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input type="email" id="loginEmail" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="email@contoh.com">
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
+          <input type="email" id="loginEmail" required class="w-full px-4 py-3 border-2 border-gray-200 focus:border-blue-500 rounded-xl outline-none transition" placeholder="email@contoh.com">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-          <input type="password" id="loginPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="••••••••">
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+          <input type="password" id="loginPassword" required class="w-full px-4 py-3 border-2 border-gray-200 focus:border-blue-500 rounded-xl outline-none transition" placeholder="••••••••">
         </div>
-        <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
-        <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg disabled:opacity-50">Masuk</button>
+        <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"></div>
+        <button type="submit" id="loginBtn" class="btn-press w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">Masuk</button>
       </form>
       <p class="text-xs text-gray-500 mt-6 text-center">Belum punya akun? Hubungi admin.</p>
     </div>
@@ -78,60 +98,66 @@
 </div>
 
 <!-- APP HEADER -->
-<header id="appHeader" class="hidden bg-white shadow-sm sticky top-0 z-10">
+<header id="appHeader" class="hidden bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-10 border-b border-gray-100">
   <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-    <button id="backBtn" class="hidden text-gray-600 text-2xl">‹</button>
-    <div class="flex-1">
-      <h1 class="font-bold text-gray-800" id="headerTitle">📋 AWW Survey</h1>
-      <p class="text-xs text-gray-500" id="headerSubtitle">Loading...</p>
+    <button id="backBtn" class="btn-press hidden text-gray-600 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">‹</button>
+    <div class="flex-1 min-w-0">
+      <h1 class="font-bold text-gray-800 truncate" id="headerTitle">📋 AWW Survey</h1>
+      <p class="text-xs text-gray-500 truncate" id="headerSubtitle">Loading...</p>
     </div>
-    <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-700 px-3 py-1">Keluar</button>
+    <button id="logoutBtn" class="btn-press text-sm text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg font-medium">Keluar</button>
   </div>
 </header>
 
 <!-- BERANDA -->
 <div id="view-beranda" class="view hidden">
   <main class="max-w-4xl mx-auto p-4">
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 mb-6">
-      <h2 class="text-xl font-semibold" id="berandaGreeting">Halo!</h2>
-      <p class="text-blue-100 text-sm mt-1" id="berandaToday"></p>
+    <div class="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white rounded-3xl p-6 mb-6 shadow-xl overflow-hidden">
+      <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full"></div>
+      <div class="absolute -right-20 -bottom-20 w-60 h-60 bg-white/5 rounded-full"></div>
+      <div class="relative">
+        <h2 class="text-2xl font-bold" id="berandaGreeting">Halo!</h2>
+        <p class="text-blue-100 text-sm mt-1" id="berandaToday"></p>
+      </div>
     </div>
     <div class="grid grid-cols-2 gap-3 mb-6">
-      <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-xs text-gray-500">Minggu Ini</p>
-        <p class="text-2xl font-bold text-blue-600" id="statMingguIni">-</p>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 card-hover">
+        <div class="flex items-center gap-2 mb-1"><span class="text-xl">📅</span><p class="text-xs text-gray-500 font-medium">Minggu Ini</p></div>
+        <p class="text-3xl font-bold text-blue-600" id="statMingguIni">-</p>
+        <p class="text-xs text-gray-400">jurnal</p>
       </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm">
-        <p class="text-xs text-gray-500">Bulan Ini</p>
-        <p class="text-2xl font-bold text-indigo-600" id="statBulanIni">-</p>
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 card-hover">
+        <div class="flex items-center gap-2 mb-1"><span class="text-xl">📆</span><p class="text-xs text-gray-500 font-medium">Bulan Ini</p></div>
+        <p class="text-3xl font-bold text-indigo-600" id="statBulanIni">-</p>
+        <p class="text-xs text-gray-400">jurnal</p>
       </div>
     </div>
-    <h3 class="font-semibold text-gray-700 mb-3">Menu</h3>
+    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">✨ Menu</h3>
     <div class="grid grid-cols-1 gap-3 mb-6">
-      <button id="menuJurnalATK" onclick="showView('input', { divisi: 'ATK' })" class="bg-white hover:bg-blue-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-blue-200 text-left">
-        <div class="bg-blue-100 p-3 rounded-xl"><span class="text-3xl">📚</span></div>
-        <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan ATK</h4><p class="text-sm text-gray-500">Survey stok ATK</p></div>
-        <span class="text-gray-400">›</span>
+      <button id="menuJurnalATK" onclick="showView('input', { divisi: 'ATK' })" class="btn-press bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-blue-300 text-left card-hover">
+        <div class="bg-gradient-to-br from-blue-400 to-blue-600 p-3 rounded-xl shadow-md"><span class="text-3xl">📚</span></div>
+        <div class="flex-1"><h4 class="font-bold text-gray-800">Jurnal Kunjungan ATK</h4><p class="text-sm text-gray-500">Survey stok ATK</p></div>
+        <span class="text-blue-400 text-xl">›</span>
       </button>
-      <button id="menuJurnalFashion" onclick="showView('input', { divisi: 'FASHION' })" class="bg-white hover:bg-purple-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-purple-200 text-left">
-        <div class="bg-purple-100 p-3 rounded-xl"><span class="text-3xl">👗</span></div>
-        <div class="flex-1"><h4 class="font-semibold text-gray-800">Jurnal Kunjungan Fashion</h4><p class="text-sm text-gray-500">Survey stok fashion</p></div>
-        <span class="text-gray-400">›</span>
+      <button id="menuJurnalFashion" onclick="showView('input', { divisi: 'FASHION' })" class="btn-press bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-purple-300 text-left card-hover">
+        <div class="bg-gradient-to-br from-purple-400 to-pink-500 p-3 rounded-xl shadow-md"><span class="text-3xl">👗</span></div>
+        <div class="flex-1"><h4 class="font-bold text-gray-800">Jurnal Kunjungan Fashion</h4><p class="text-sm text-gray-500">Survey stok fashion</p></div>
+        <span class="text-purple-400 text-xl">›</span>
       </button>
-      <button onclick="showView('riwayat')" class="bg-white hover:bg-green-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-green-200 text-left">
-        <div class="bg-green-100 p-3 rounded-xl"><span class="text-3xl">📊</span></div>
-        <div class="flex-1"><h4 class="font-semibold text-gray-800">Riwayat Jurnal</h4><p class="text-sm text-gray-500">Lihat & export jurnal</p></div>
-        <span class="text-gray-400">›</span>
+      <button onclick="showView('riwayat')" class="btn-press bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-emerald-300 text-left card-hover">
+        <div class="bg-gradient-to-br from-emerald-400 to-teal-500 p-3 rounded-xl shadow-md"><span class="text-3xl">📊</span></div>
+        <div class="flex-1"><h4 class="font-bold text-gray-800">Riwayat Jurnal</h4><p class="text-sm text-gray-500">Lihat & export jurnal</p></div>
+        <span class="text-emerald-400 text-xl">›</span>
       </button>
-      <button id="menuPusat" onclick="showView('pusat')" class="hidden bg-white hover:bg-red-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-red-200 text-left">
-        <div class="bg-red-100 p-3 rounded-xl"><span class="text-3xl">🏢</span></div>
-        <div class="flex-1"><h4 class="font-semibold text-gray-800">Pengelolaan Pusat</h4><p class="text-sm text-gray-500">Putuskan: gudang/belanja/retur/transfer</p></div>
-        <span class="text-gray-400">›</span>
+      <button id="menuPusat" onclick="showView('pusat')" class="btn-press hidden bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-red-300 text-left card-hover">
+        <div class="bg-gradient-to-br from-red-400 to-rose-500 p-3 rounded-xl shadow-md"><span class="text-3xl">🏢</span></div>
+        <div class="flex-1"><h4 class="font-bold text-gray-800">Pengelolaan Pusat</h4><p class="text-sm text-gray-500">Putuskan: gudang/belanja/retur/transfer</p></div>
+        <span class="text-red-400 text-xl">›</span>
       </button>
-      <button id="menuRingkasan" onclick="showView('ringkasan')" class="hidden bg-white hover:bg-yellow-50 rounded-xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-yellow-200 text-left">
-        <div class="bg-yellow-100 p-3 rounded-xl"><span class="text-3xl">📋</span></div>
-        <div class="flex-1"><h4 class="font-semibold text-gray-800">Ringkasan Keputusan</h4><p class="text-sm text-gray-500">Daftar belanja, transfer, retur</p></div>
-        <span class="text-gray-400">›</span>
+      <button id="menuRingkasan" onclick="showView('ringkasan')" class="btn-press hidden bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4 border-2 border-transparent hover:border-amber-300 text-left card-hover">
+        <div class="bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-xl shadow-md"><span class="text-3xl">📋</span></div>
+        <div class="flex-1"><h4 class="font-bold text-gray-800">Ringkasan Keputusan</h4><p class="text-sm text-gray-500">Daftar belanja, transfer, retur</p></div>
+        <span class="text-amber-400 text-xl">›</span>
       </button>
     </div>
     <h3 class="font-semibold text-gray-700 mb-3">Jurnal Terbaru</h3>
@@ -169,10 +195,10 @@
       <textarea id="inputCatatan" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Catatan umum..."></textarea>
     </div>
   </main>
-  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+  <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 shadow-2xl">
     <div class="max-w-4xl mx-auto flex gap-2">
-      <button id="saveDraftBtn" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50">💾 Draft</button>
-      <button id="submitJurnalBtn" class="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50">✓ Kirim ke Pusat</button>
+      <button id="saveDraftBtn" class="btn-press flex-1 py-3.5 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50">💾 Draft</button>
+      <button id="submitJurnalBtn" class="btn-press flex-[2] py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">✓ Kirim ke Pusat</button>
     </div>
   </div>
 </div>
@@ -299,6 +325,28 @@
 
 <script src="config.js"></script>
 <script>
+// ============ TOAST NOTIFICATION ============
+function toast(message, type = 'info', duration = 3000) {
+  const colors = {
+    success: 'bg-emerald-500',
+    error: 'bg-red-500',
+    warning: 'bg-amber-500',
+    info: 'bg-blue-600'
+  };
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+  const el = document.createElement('div');
+  el.className = `${colors[type]} text-white px-5 py-3 rounded-full shadow-2xl toast-in flex items-center gap-2 mt-2 pointer-events-auto font-medium text-sm`;
+  el.innerHTML = `<span class="text-lg">${icons[type]}</span><span>${message}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  // Haptic feedback kalau ada
+  if (navigator.vibrate) navigator.vibrate(type === 'error' ? [50, 30, 50] : 30);
+  setTimeout(() => {
+    el.classList.remove('toast-in');
+    el.classList.add('toast-out');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
 // ============ GLOBAL STATE ============
 const State = {
   user: null, profile: null, cabangs: [],
@@ -612,7 +660,7 @@ function addItemRow(catId, dataAwal=null) {
       <div class="w-8 text-center text-sm font-semibold text-gray-500" data-row-number>${nomor}</div>
       <input type="text" placeholder="Nama barang..." value="${item.nama_barang}" onchange="updateItem('${catId}','${itemId}','nama_barang',this.value)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white">
       <div class="flex gap-1 flex-shrink-0">
-        ${['M','S','P','N'].map(k => `<button type="button" onclick="setKondisi('${catId}','${itemId}','${k}',this)" class="kondisi-btn-${itemId} w-10 h-10 rounded-lg text-sm font-bold transition ${item.kondisi===k?getKondisiClass(k,true):getKondisiClass(k,false)}" data-kondisi="${k}">${k}</button>`).join('')}
+        ${['M','S','P','N'].map(k => `<button type="button" onclick="setKondisi('${catId}','${itemId}','${k}',this)" class="kondisi-btn-${itemId} kondisi-btn w-10 h-10 rounded-lg text-sm font-bold ${item.kondisi===k?getKondisiClass(k,true)+' selected':getKondisiClass(k,false)}" data-kondisi="${k}">${k}</button>`).join('')}
       </div>
       ${fashionCol}
       <input type="text" placeholder="qty" value="${item.estimasi_sisa}" onchange="updateItem('${catId}','${itemId}','estimasi_sisa',this.value)" class="w-24 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center bg-white">
@@ -627,19 +675,20 @@ function addItemRow(catId, dataAwal=null) {
 
 function getKondisiClass(k, active) {
   const map = {
-    'M': active?'bg-yellow-400 text-white shadow-md':'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-50',
-    'S': active?'bg-green-500 text-white shadow-md':'bg-white text-green-700 border border-green-300 hover:bg-green-50',
-    'P': active?'bg-blue-500 text-white shadow-md':'bg-white text-blue-700 border border-blue-300 hover:bg-blue-50',
-    'N': active?'bg-orange-500 text-white shadow-md':'bg-white text-orange-700 border border-orange-300 hover:bg-orange-50'
+    'M': active?'bg-gradient-to-br from-yellow-400 to-amber-500 text-white':'bg-white text-yellow-700 border border-yellow-300 hover:bg-yellow-50',
+    'S': active?'bg-gradient-to-br from-green-500 to-emerald-600 text-white':'bg-white text-green-700 border border-green-300 hover:bg-green-50',
+    'P': active?'bg-gradient-to-br from-blue-500 to-indigo-600 text-white':'bg-white text-blue-700 border border-blue-300 hover:bg-blue-50',
+    'N': active?'bg-gradient-to-br from-orange-500 to-red-500 text-white':'bg-white text-orange-700 border border-orange-300 hover:bg-orange-50'
   };
   return map[k];
 }
 
 function setKondisi(catId, itemId, kondisi, btn) {
   updateItem(catId, itemId, 'kondisi', kondisi);
+  if (navigator.vibrate) navigator.vibrate(15);
   document.querySelectorAll(`.kondisi-btn-${itemId}`).forEach(b => {
     const k = b.dataset.kondisi;
-    b.className = `kondisi-btn-${itemId} w-10 h-10 rounded-lg text-sm font-bold transition ${k===kondisi?getKondisiClass(k,true):getKondisiClass(k,false)}`;
+    b.className = `kondisi-btn-${itemId} kondisi-btn w-10 h-10 rounded-lg text-sm font-bold ${k===kondisi?getKondisiClass(k,true)+' selected':getKondisiClass(k,false)}`;
   });
 }
 
@@ -666,7 +715,7 @@ document.getElementById('submitJurnalBtn').addEventListener('click', () => saveJ
 async function saveJurnal(status) {
   const tanggal = document.getElementById('inputTanggal').value;
   const cabang_id = document.getElementById('inputCabang').value;
-  if (!tanggal || !cabang_id) { alert('Tanggal dan Cabang wajib diisi!'); return; }
+  if (!tanggal || !cabang_id) { toast('Tanggal dan Cabang wajib diisi!', 'warning'); return; }
   const flatItems = [];
   let urutan = 1;
   State.input.categories.forEach(cat => {
@@ -681,10 +730,13 @@ async function saveJurnal(status) {
       }
     });
   });
-  if (flatItems.length === 0 && status === 'submitted') { alert('Belum ada item yang diisi!'); return; }
+  if (flatItems.length === 0 && status === 'submitted') { toast('Belum ada item yang diisi!', 'warning'); return; }
   const submitBtn = document.getElementById('submitJurnalBtn');
   const draftBtn = document.getElementById('saveDraftBtn');
+  const originalText = status==='submitted' ? submitBtn.innerHTML : draftBtn.innerHTML;
   submitBtn.disabled = true; draftBtn.disabled = true;
+  if (status==='submitted') submitBtn.innerHTML = '<span class="spinner"></span> Menyimpan...';
+  else draftBtn.innerHTML = '<span class="spinner" style="border-top-color:#374151;border-color:#9ca3af"></span> Menyimpan...';
   const jurnalData = {
     tanggal, cabang_id: parseInt(cabang_id), divisi: State.input.divisi,
     petugas_id: State.user.id, petugas_nama: State.profile.nama,
@@ -696,20 +748,32 @@ async function saveJurnal(status) {
   let jurnalId = State.input.editId;
   if (State.input.editId) {
     const { error } = await supabaseClient.from('jurnal_kunjungan').update(jurnalData).eq('id', State.input.editId);
-    if (error) { alert('Gagal: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+    if (error) { console.error('Update jurnal error:', error); toast('Gagal: '+error.message, 'error', 5000); submitBtn.disabled=false; draftBtn.disabled=false; submitBtn.innerHTML="✓ Kirim ke Pusat"; draftBtn.innerHTML="💾 Draft"; return; }
     await supabaseClient.from('jurnal_items').delete().eq('jurnal_id', State.input.editId);
   } else {
     const { data, error } = await supabaseClient.from('jurnal_kunjungan').insert(jurnalData).select().single();
-    if (error) { alert('Gagal: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+    if (error) {
+      console.error('Insert jurnal error:', error, 'Data:', jurnalData);
+      let msg = error.message;
+      if (error.message.includes('row-level security')) msg = 'Akses database ditolak. Hubungi admin untuk fix RLS policy.';
+      toast('Gagal: '+msg, 'error', 6000);
+      submitBtn.disabled=false; draftBtn.disabled=false; submitBtn.innerHTML="✓ Kirim ke Pusat"; draftBtn.innerHTML="💾 Draft"; return;
+    }
     jurnalId = data.id;
   }
   if (flatItems.length > 0) {
     const itemsToInsert = flatItems.map(item => ({ ...item, jurnal_id: jurnalId }));
     const { error } = await supabaseClient.from('jurnal_items').insert(itemsToInsert);
-    if (error) { alert('Gagal simpan items: '+error.message); submitBtn.disabled=false; draftBtn.disabled=false; return; }
+    if (error) {
+      console.error('Insert items error:', error);
+      toast('Gagal simpan items: '+error.message, 'error', 5000);
+      submitBtn.disabled=false; draftBtn.disabled=false; submitBtn.innerHTML="✓ Kirim ke Pusat"; draftBtn.innerHTML="💾 Draft"; return;
+    }
   }
-  alert(status==='submitted'?'✓ Jurnal berhasil dikirim ke pusat!':'💾 Draft tersimpan');
+  toast(status==='submitted'?'Jurnal berhasil dikirim ke pusat! 🎉':'Draft tersimpan 💾', 'success');
   submitBtn.disabled = false; draftBtn.disabled = false;
+  submitBtn.innerHTML = '✓ Kirim ke Pusat';
+  draftBtn.innerHTML = '💾 Draft';
   showView('beranda');
 }
 
@@ -752,14 +816,14 @@ async function loadRiwayat() {
 async function hapusJurnal(id) {
   if (!confirm('Yakin mau hapus jurnal ini?')) return;
   const { error } = await supabaseClient.from('jurnal_kunjungan').delete().eq('id', id);
-  if (error) { alert('Gagal hapus: '+error.message); return; }
+  if (error) { toast('Gagal hapus: '+error.message, 'error'); return; }
   loadRiwayat();
 }
 
 document.getElementById('applyRiwayatFilterBtn').addEventListener('click', loadRiwayat);
 
 document.getElementById('exportRiwayatBtn').addEventListener('click', async () => {
-  if (State.riwayat.data.length === 0) { alert('Tidak ada data'); return; }
+  if (State.riwayat.data.length === 0) { toast('Tidak ada data untuk di-export', 'warning'); return; }
   const btn = document.getElementById('exportRiwayatBtn');
   btn.textContent = 'Memproses...'; btn.disabled = true;
   const jurnalIds = State.riwayat.data.map(j => j.id);
@@ -841,7 +905,7 @@ async function initDetail(id) {
 
 // ============ PUSAT ============
 async function initPusat() {
-  if (State.profile.peran !== 'admin') { alert('Halaman ini hanya untuk Admin.'); showView('beranda'); return; }
+  if (State.profile.peran !== 'admin') { toast('Halaman ini hanya untuk Admin.', 'warning'); showView('beranda'); return; }
   await loadCabangsForSelect('pusatFilterCabang');
   loadPusatStats(); loadPusatJurnal();
 }
@@ -1019,7 +1083,7 @@ function updatePutuskanProgress() {
 document.getElementById('putuskanSaveBtn').addEventListener('click', async () => {
   const items = State.putuskan.items;
   const transferTanpaCabang = items.filter(i => i.keputusan === 'transfer' && !i.transfer_ke_cabang_id);
-  if (transferTanpaCabang.length > 0) { alert(`Ada ${transferTanpaCabang.length} barang Transfer belum pilih cabang tujuan!`); return; }
+  if (transferTanpaCabang.length > 0) { toast(`Ada ${transferTanpaCabang.length} barang Transfer belum pilih cabang tujuan!`, 'warning', 4000); return; }
   const btn = document.getElementById('putuskanSaveBtn');
   btn.disabled = true; btn.textContent = 'Menyimpan...';
   let errCount = 0;
@@ -1035,19 +1099,19 @@ document.getElementById('putuskanSaveBtn').addEventListener('click', async () =>
     const { error } = await supabaseClient.from('jurnal_items').update(updateData).eq('id', item.id);
     if (error) { console.error(error); errCount++; }
   }
-  if (errCount > 0) { alert(`Selesai dengan ${errCount} error.`); btn.disabled=false; btn.textContent='✓ Simpan'; return; }
+  if (errCount > 0) { toast(`Selesai dengan ${errCount} error.`, 'error', 4000); btn.disabled=false; btn.textContent='✓ Simpan'; return; }
   const allDecided = items.every(i => i.keputusan);
   if (allDecided) {
     await supabaseClient.from('jurnal_kunjungan').update({ status:'reviewed', updated_at: new Date().toISOString() }).eq('id', State.putuskan.jurnalId);
   }
-  alert(allDecided ? '✓ Semua diputuskan, jurnal selesai!' : '✓ Tersimpan. Masih ada yang belum diputuskan.');
+  toast(allDecided ? 'Semua diputuskan, jurnal selesai! 🎉' : 'Tersimpan. Masih ada yang belum diputuskan.', 'success');
   btn.disabled = false; btn.textContent = '✓ Simpan';
   showView('pusat');
 });
 
 // ============ RINGKASAN ============
 async function initRingkasan() {
-  if (State.profile.peran !== 'admin') { alert('Halaman ini hanya untuk Admin.'); showView('beranda'); return; }
+  if (State.profile.peran !== 'admin') { toast('Halaman ini hanya untuk Admin.', 'warning'); showView('beranda'); return; }
   await loadCabangsForSelect('ringkasanFilterCabang');
   State.ringkasan.currentTab = 'gudang';
   document.querySelectorAll('.ringkasan-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'gudang'));
@@ -1139,7 +1203,7 @@ document.querySelectorAll('.ringkasan-tab').forEach(btn => {
 document.getElementById('applyRingkasanFilterBtn').addEventListener('click', loadRingkasanData);
 
 document.getElementById('exportRingkasanBtn').addEventListener('click', () => {
-  if (State.ringkasan.allData.length === 0) { alert('Tidak ada data'); return; }
+  if (State.ringkasan.allData.length === 0) { toast('Tidak ada data untuk di-export', 'warning'); return; }
   const wb = XLSX.utils.book_new();
   ['gudang','belanja','retur','transfer'].forEach(jenis => {
     const items = State.ringkasan.allData.filter(i => i.keputusan === jenis);
